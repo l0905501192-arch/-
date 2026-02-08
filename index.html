@@ -41,17 +41,15 @@
         .btn-share { background: #333; color: white; }
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; width: 100%; max-width: 1100px; }
         
-        /* --- 卡片核心結構 --- */
+        /* --- 卡片結構 --- */
         .card-container { height: 420px; perspective: 1000px; cursor: pointer; }
         .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; border-radius: 20px; }
         
-        /* 移除 hover，改用 class 控制翻轉 */
         .card-container.is-flipped .card-inner { transform: rotateY(180deg); }
-        /* 編輯模式下強制翻轉至背面 */
         .editing .card-inner { transform: rotateY(180deg) !important; }
 
         .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); background: var(--card-bg); overflow: hidden; transition: background 0.3s; }
-        .card-front img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; } /* 禁止圖片干擾點擊 */
+        .card-front img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
         .card-back { transform: rotateY(180deg); display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; }
         
         .title { font-family: 'Playfair Display', serif; font-size: calc(var(--font-size-base) * 1.6); color: var(--accent-color); margin-bottom: 12px; outline: none; border-bottom: 1px solid transparent; }
@@ -87,7 +85,11 @@
         let isEditing = false;
         let siteData = {
             theme: { bg: "#fdfaf5", card: "#ffffff", accent: "#d4a373", text: "#4a4a4a", size: 16 },
-            cards: [{ title: "點擊我翻轉", img: "https://duk.tw/images/2026/02/08/example.png", text: "現在不管是電腦點擊還是手機輕觸，都可以輕鬆翻轉卡片囉！" }]
+            cards: [{ 
+                title: "作品標題", 
+                img: "https://duk.tw/images/2026/02/08/example.png", 
+                text: "文章內容，點擊可翻轉卡片" 
+            }]
         };
 
         function init() {
@@ -99,7 +101,7 @@
                 try {
                     const base64Data = h.replace('data=', '');
                     siteData = JSON.parse(decodeURIComponent(escape(atob(base64Data))));
-                } catch(e) { console.error("Data decode error", e); }
+                } catch(e) { console.error("Data error", e); }
             } else if (isEmbedded) {
                 document.body.classList.add('viewer-mode');
                 loadFromLocal();
@@ -113,15 +115,13 @@
         }
 
         function loadFromLocal() {
-            const local = localStorage.getItem('Gallery_V49');
+            const local = localStorage.getItem('Gallery_V50');
             if (local) siteData = JSON.parse(local);
         }
 
         function toggleUI() { document.body.classList.toggle('viewer-mode'); }
 
-        // 翻轉卡片的邏輯
         function handleCardClick(element, event) {
-            // 如果是在編輯模式，或者是點擊到卡片背面的輸入框/按鈕，不觸發翻轉
             if (isEditing || event.target.closest('.edit-tools') || event.target.closest('.scroll-content') || event.target.closest('.title')) {
                 return;
             }
@@ -182,15 +182,14 @@
             isEditing = !isEditing;
             document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成" : "✏️ 編輯模式";
             if (!isEditing) {
-                // 退出編輯時移除所有翻轉 class，回歸正面
                 document.querySelectorAll('.card-container').forEach(c => c.classList.remove('is-flipped'));
-                localStorage.setItem('Gallery_V49', JSON.stringify(siteData));
+                localStorage.setItem('Gallery_V50', JSON.stringify(siteData));
             }
             render();
         }
 
         function addCard() {
-            siteData.cards.push({ title: "新標題", img: "https://via.placeholder.com/300x420?text=New+Image", text: "內容..." });
+            siteData.cards.push({ title: "作品標題", img: "https://via.placeholder.com/300x420?text=New+Image", text: "文章內容，點擊可翻轉卡片" });
             render();
         }
 
@@ -199,7 +198,7 @@
                 const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
                 const shareUrl = window.location.origin + window.location.pathname + "#data=" + b64;
                 navigator.clipboard.writeText(shareUrl).then(() => {
-                    alert("🔗 分享連結已成功複製！\n現在手機用戶也可以透過點擊來翻轉卡片了。");
+                    alert("🔗 連結已成功複製！\n您可以將此連結貼到 Notion 嵌入。");
                 });
             } catch (e) { alert("連結產生失敗。"); }
         }
