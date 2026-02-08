@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>圖文展示插件 - 極致自定義版</title>
+    <title>作品展示集</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <style id="theme-style">
         :root {
@@ -28,7 +28,14 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; gap: 15px;
             align-items: center; margin-bottom: 40px; position: sticky; top: 20px; z-index: 1000;
             flex-wrap: wrap; justify-content: center; border: 1px solid #eee;
+            transition: opacity 0.3s, transform 0.3s;
         }
+
+        /* 訪客模式下隱藏面板 */
+        .viewer-mode .admin-panel {
+            display: none;
+        }
+
         .control-item { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: bold; color: #555; }
         input[type="color"] { border: none; width: 22px; height: 22px; cursor: pointer; background: none; padding: 0; }
         input[type="range"] { width: 70px; accent-color: var(--accent-color); }
@@ -68,7 +75,6 @@
             flex-grow: 1; overflow-y: auto; font-size: var(--font-size-base); 
             line-height: 1.8; color: var(--text-color); outline: none; white-space: pre-wrap; 
         }
-        [contenteditable="true"]:focus { border-bottom: 1px dashed var(--accent-color); background: rgba(0,0,0,0.03); }
 
         /* --- 編輯工具列 --- */
         .edit-tools { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; display: none; }
@@ -79,17 +85,16 @@
             margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px;
             font-size: 11px; color: #666; background: rgba(0,0,0,0.02);
         }
-        .img-url-input:focus { border-color: var(--accent-color); outline: none; background: white; }
         .delete-btn { background:#ff7675; color:white; padding:6px 12px; font-size:11px; border:none; border-radius:8px; cursor:pointer; width: 100%; }
 
-        /* 捲軸美化 */
-        .scroll-content::-webkit-scrollbar { width: 3px; }
-        .scroll-content::-webkit-scrollbar-thumb { background: var(--accent-color); border-radius: 4px; }
+        /* 提示訊息 */
+        #hint { position: fixed; bottom: 20px; font-size: 10px; color: #ccc; opacity: 0; transition: 0.5s; }
+        body:hover #hint { opacity: 1; }
     </style>
 </head>
-<body>
+<body ondblclick="toggleUI()">
 
-    <div class="admin-panel">
+    <div class="admin-panel" id="ui-panel">
         <div class="control-item">背景<input type="color" id="p-bg" onchange="updateUI()"></div>
         <div class="control-item">卡片<input type="color" id="p-card" onchange="updateUI()"></div>
         <div class="control-item">文字<input type="color" id="p-text" onchange="updateUI()"></div>
@@ -98,29 +103,39 @@
         <div class="divider"></div>
         <button class="btn-main" onclick="toggleEdit()" id="edit-btn">✏️ 編輯模式</button>
         <button onclick="addCard()">＋ 新增</button>
-        <button class="btn-share" onclick="saveAndCopy()">🔗 產生獨立網址</button>
+        <button class="btn-share" onclick="saveAndCopy()">🔗 產生分享連結</button>
     </div>
 
     <div class="gallery" id="gallery"></div>
+    
+    <div id="hint">雙擊背景可開啟/關閉控制面板</div>
 
     <script>
         let isEditing = false;
         let siteData = {
             theme: { bg: "#fdfaf5", card: "#ffffff", accent: "#d4a373", text: "#4a4a4a", size: 15 },
-            cards: [{ title: "範例作品", img: "https://duk.tw/images/2026/02/08/example.png", text: "進入編輯模式後，可以直接貼上新的圖片網址。\n也可以在上方調整卡片底色與字體大小。" }]
+            cards: [{ title: "範例作品", img: "https://duk.tw/images/2026/02/08/example.png", text: "這是一個精美的展示頁面。\n\n現在分享出去的連結將不會看到編輯選項囉！" }]
         };
 
         function init() {
             const h = window.location.hash.substring(1);
             if (h.startsWith('data=')) {
-                try { siteData = JSON.parse(decodeURIComponent(escape(atob(h.replace('data=', ''))))); } catch(e) { console.error(e); }
+                // 訪客模式：隱藏 UI
+                document.body.classList.add('viewer-mode');
+                try { siteData = JSON.parse(decodeURIComponent(escape(atob(h.replace('data=', ''))))); } catch(e) {}
             } else {
-                const local = localStorage.getItem('CustomGalleryV7');
+                // 編輯模式：顯示 UI
+                document.body.classList.remove('viewer-mode');
+                const local = localStorage.getItem('CustomGalleryV8');
                 if (local) siteData = JSON.parse(local);
             }
             syncControls();
             updateUI();
             render();
+        }
+
+        function toggleUI() {
+            document.body.classList.toggle('viewer-mode');
         }
 
         function syncControls() {
@@ -175,19 +190,19 @@
         function toggleEdit() {
             isEditing = !isEditing;
             document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成" : "✏️ 編輯模式";
-            if (!isEditing) localStorage.setItem('CustomGalleryV7', JSON.stringify(siteData));
+            if (!isEditing) localStorage.setItem('CustomGalleryV8', JSON.stringify(siteData));
             render();
         }
 
         function addCard() {
-            siteData.cards.push({ title: "新作品", img: "https://via.placeholder.com/300x420?text=New+Image", text: "在此輸入內容..." });
+            siteData.cards.push({ title: "新作品", img: "https://via.placeholder.com/300x420?text=New+Image", text: "內容..." });
             render();
         }
 
         function saveAndCopy() {
             const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
             const url = window.location.origin + window.location.pathname + "#data=" + b64;
-            navigator.clipboard.writeText(url).then(() => alert("🔗 連結已複製！現在您可以分享這個專屬網址了。"));
+            navigator.clipboard.writeText(url).then(() => alert("🔗 分享連結已複製！\n這個網址打開後將不會看到控制面板。"));
         }
 
         init();
