@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>作品展示集</title>
+    <title>個人圖文展示集</title>
+    <meta name="description" content="這是一個用於展示個人圖文創作的精美插件網頁。">
+    <meta name="author" content="Gallery Plugin User">
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
+    
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    
     <style id="theme-style">
         :root {
             --bg-color: #fdfaf5;
@@ -24,13 +30,14 @@
 
         /* --- 頂部控制面板 --- */
         .admin-panel {
-            background: white; padding: 15px 25px; border-radius: 40px;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            padding: 15px 25px; border-radius: 40px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; gap: 15px;
             align-items: center; margin-bottom: 40px; position: sticky; top: 20px; z-index: 1000;
             flex-wrap: wrap; justify-content: center; border: 1px solid #eee;
         }
 
-        /* 訪客/嵌入模式下隱藏面板 */
+        /* 隱藏邏輯：當 body 具有 viewer-mode 類別時隱藏 */
         .viewer-mode .admin-panel { display: none; }
 
         .control-item { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: bold; color: #555; }
@@ -46,7 +53,7 @@
         .btn-share { background: #333; color: white; }
         button:hover { opacity: 0.9; transform: translateY(-1px); }
 
-        /* --- 畫廊與卡片 --- */
+        /* --- 畫廊與卡片佈局 --- */
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; width: 100%; max-width: 1100px; }
         .card-container { height: 420px; perspective: 1000px; }
         .card-inner {
@@ -72,7 +79,7 @@
             line-height: 1.8; color: var(--text-color); outline: none; white-space: pre-wrap; 
         }
 
-        /* --- 編輯模式工具 --- */
+        /* --- 編輯功能工具 --- */
         .edit-tools { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; display: none; }
         .editing .edit-tools { display: block; }
         .img-url-input {
@@ -107,36 +114,36 @@
         let isEditing = false;
         let siteData = {
             theme: { bg: "#fdfaf5", card: "#ffffff", accent: "#d4a373", text: "#4a4a4a", size: 16 },
-            cards: [{ title: "我的作品", img: "https://duk.tw/images/2026/02/08/example.png", text: "點擊編輯模式來開始創作。\n雙擊背景可以切換面板顯示。" }]
+            cards: [{ title: "作品名稱", img: "https://duk.tw/images/2026/02/08/example.png", text: "點擊編輯模式開始創作。\n分享連結已針對 Notion 進行隱藏優化。" }]
         };
 
         function init() {
             const h = window.location.hash.substring(1);
-            const isEmbedded = window.self !== window.top; // 判斷是否嵌入 Notion
+            const isEmbedded = window.self !== window.top; // 偵測是否在 iframe 內
 
             if (h.startsWith('data=')) {
-                // 訪客模式：隱藏 UI 並讀取網址資料
+                // 訪客模式
                 document.body.classList.add('viewer-mode');
                 try {
                     const base64Data = h.replace('data=', '');
                     siteData = JSON.parse(decodeURIComponent(escape(atob(base64Data))));
-                } catch(e) { console.error("Data Load Error", e); }
+                } catch(e) { console.error("Data decode error", e); }
             } else if (isEmbedded) {
-                // 嵌入模式：預設隱藏 UI 但讀取本地暫存
+                // 嵌入模式預設隱藏面板
                 document.body.classList.add('viewer-mode');
-                loadLocal();
+                loadFromLocal();
             } else {
-                // 正常網頁模式：顯示 UI 並讀取暫存
+                // 編輯模式
                 document.body.classList.remove('viewer-mode');
-                loadLocal();
+                loadFromLocal();
             }
             syncControls();
             updateUI();
             render();
         }
 
-        function loadLocal() {
-            const local = localStorage.getItem('CustomGallery_V46');
+        function loadFromLocal() {
+            const local = localStorage.getItem('Gallery_V47');
             if (local) siteData = JSON.parse(local);
         }
 
@@ -177,7 +184,7 @@
                                 <div class="title" contenteditable="${isEditing}" oninput="siteData.cards[${i}].title=this.innerText">${c.title}</div>
                                 <div class="scroll-content" contenteditable="${isEditing}" oninput="siteData.cards[${i}].text=this.innerText">${c.text}</div>
                                 <div class="edit-tools">
-                                    <input type="text" class="img-url-input" placeholder="貼上圖片網址" value="${c.img}" oninput="updateImg(${i}, this.value)">
+                                    <input type="text" class="img-url-input" placeholder="圖片網址" value="${c.img}" oninput="updateImg(${i}, this.value)">
                                     <button class="delete-btn" onclick="siteData.cards.splice(${i},1);render()">刪除卡片</button>
                                 </div>
                             </div>
@@ -194,13 +201,13 @@
 
         function toggleEdit() {
             isEditing = !isEditing;
-            document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成編輯" : "✏️ 編輯模式";
-            if (!isEditing) localStorage.setItem('CustomGallery_V46', JSON.stringify(siteData));
+            document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成" : "✏️ 編輯模式";
+            if (!isEditing) localStorage.setItem('Gallery_V47', JSON.stringify(siteData));
             render();
         }
 
         function addCard() {
-            siteData.cards.push({ title: "新標題", img: "https://via.placeholder.com/300x420?text=New+Image", text: "請輸入內容..." });
+            siteData.cards.push({ title: "新標題", img: "https://via.placeholder.com/300x420?text=New+Image", text: "內容..." });
             render();
         }
 
@@ -208,16 +215,10 @@
             try {
                 const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
                 const shareUrl = window.location.origin + window.location.pathname + "#data=" + b64;
-                
                 navigator.clipboard.writeText(shareUrl).then(() => {
-                    alert("🔗 分享連結已成功複製！\n您可以將此連結貼到 Notion 嵌入，編輯面板會自動隱藏。");
-                }).catch(err => {
-                    console.error('Clipboard error', err);
-                    alert("複製失敗，請手動複製網址列的 Hash 代碼。");
+                    alert("🔗 連結已成功複製！\n若瀏覽器顯示警告，建議先至 Lihi.io 縮短此連結後再貼入 Notion。");
                 });
-            } catch (e) {
-                alert("產生連結時發生錯誤，請檢查內容是否包含特殊字元。");
-            }
+            } catch (e) { alert("連結產生失敗。"); }
         }
 
         init();
