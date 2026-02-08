@@ -3,30 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>作品展示集</title>
+    <title>個人作品集 - 色彩獨立版</title>
     <meta name="referrer" content="no-referrer">
-    <meta name="description" content="個人圖文展示作品集">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     
     <style id="theme-style">
         :root {
             --bg-color: #fdfaf5;
-            --card-bg: #ffffff;
-            --accent-color: #d4a373;
-            --text-color: #4a4a4a;
             --font-size-base: 16px;
         }
     </style>
     <style>
         body {
-            background-color: var(--bg-color); color: var(--text-color);
-            font-family: 'Noto Sans TC', sans-serif; transition: all 0.3s ease;
+            background-color: var(--bg-color);
+            font-family: 'Noto Sans TC', sans-serif; transition: background 0.3s ease;
             margin: 0; padding: 40px; min-height: 100vh; box-sizing: border-box;
             display: flex; flex-direction: column; align-items: center;
         }
 
-        /* --- 控制面板 --- */
+        /* --- 頂部控制面板 (僅保留全域設定) --- */
         .admin-panel {
             background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
             padding: 15px 25px; border-radius: 40px;
@@ -36,47 +32,60 @@
         }
         .viewer-mode .admin-panel { display: none; }
         .control-item { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: bold; color: #555; }
-        input[type="color"] { border: none; width: 22px; height: 22px; cursor: pointer; background: none; }
-        input[type="range"] { width: 70px; accent-color: var(--accent-color); }
+        input[type="color"] { border: none; width: 22px; height: 22px; cursor: pointer; background: none; padding: 0; }
+        input[type="range"] { width: 70px; }
         .divider { border-left: 1px solid #ddd; height: 24px; margin: 0 5px; }
         
         button { padding: 8px 18px; border-radius: 20px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; }
-        .btn-main { background: var(--accent-color); color: white; }
-        .btn-share { background: #333; color: white; }
-        .btn-single-share { background: #6c5ce7; color: white; width: 100%; margin-top: 5px; }
+        .btn-main { background: #333; color: white; }
+        .btn-share { background: #6c5ce7; color: white; }
         button:hover { opacity: 0.8; transform: translateY(-1px); }
 
         /* --- 畫廊與佈局 --- */
         .gallery { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
-            gap: 30px; width: 100%; max-width: 1100px; 
-            justify-content: center;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 30px; width: 100%; max-width: 1100px; justify-content: center;
         }
-        
-        /* 當只有一張卡片時，自動置中 */
-        .single-card-view .gallery {
-            display: flex;
-            justify-content: center;
-        }
+        .single-card-view .gallery { display: flex; justify-content: center; }
 
-        .card-container { height: 420px; width: 100%; max-width: 300px; perspective: 1000px; cursor: pointer; }
+        /* --- 卡片核心 (使用 CSS 變數接收獨立顏色) --- */
+        .card-container { 
+            height: 420px; width: 100%; max-width: 300px; perspective: 1000px; cursor: pointer;
+            --c-card: #ffffff; --c-text: #4a4a4a; --c-accent: #d4a373;
+        }
         .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; border-radius: 20px; will-change: transform; }
         .card-container.is-flipped .card-inner { transform: rotateY(180deg); }
         .editing .card-inner { transform: rotateY(180deg) !important; }
 
-        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); background: var(--card-bg); overflow: hidden; }
-        .card-front img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        .card-front, .card-back { 
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; 
+            border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); 
+            background: var(--c-card); color: var(--c-text); overflow: hidden; 
+        }
+        .card-front img { width: 100%; height: 100%; object-fit: contain; background: var(--c-card); pointer-events: none; }
         .card-back { transform: rotateY(180deg); display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; }
         
-        .title { font-family: 'Playfair Display', serif; font-size: calc(var(--font-size-base) * 1.6); color: var(--accent-color); margin-bottom: 12px; outline: none; border-bottom: 1px solid transparent; }
-        .scroll-content { flex-grow: 1; overflow-y: auto; font-size: var(--font-size-base); line-height: 1.8; color: var(--text-color); outline: none; white-space: pre-wrap; }
-        .editing [contenteditable="true"] { pointer-events: auto; cursor: text; }
+        .title { font-family: 'Playfair Display', serif; font-size: calc(var(--font-size-base) * 1.6); color: var(--c-accent); margin-bottom: 12px; outline: none; border-bottom: 1px solid transparent; }
+        .scroll-content { flex-grow: 1; overflow-y: auto; font-size: var(--font-size-base); line-height: 1.8; outline: none; white-space: pre-wrap; }
+        
+        /* 捲軸顏色隨卡片強調色變化 */
+        .scroll-content::-webkit-scrollbar { width: 3px; }
+        .scroll-content::-webkit-scrollbar-thumb { background: var(--c-accent); border-radius: 4px; }
 
+        .editing [contenteditable="true"] { pointer-events: auto; cursor: text; border-bottom: 1px dashed #ccc; }
+
+        /* --- 卡片背面獨立編輯工具 --- */
         .edit-tools { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd; display: none; pointer-events: auto; }
         .editing .edit-tools { display: block; }
-        .img-url-input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px; font-size: 11px; background: rgba(0,0,0,0.03); }
-        .delete-btn { background:#ff7675; color:white; padding:6px 12px; font-size:11px; border:none; border-radius:8px; cursor:pointer; width: 100%; margin-top: 5px; }
+        
+        .color-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .color-pick-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; font-weight: bold; color: #888; }
+        
+        .img-url-input { width: 100%; box-sizing: border-box; padding: 6px 10px; margin-bottom: 8px; border: 1px solid #eee; border-radius: 8px; font-size: 11px; background: rgba(0,0,0,0.03); }
+        
+        .btn-row { display: flex; gap: 5px; }
+        .delete-btn { background:#ff7675; color:white; padding:6px; border-radius:20px; border:none; cursor:pointer; font-size: 11px; flex: 1; }
+        .single-share-btn { background:#6c5ce7; color:white; padding:6px; border-radius:20px; border:none; cursor:pointer; font-size: 11px; flex: 2; }
         
         #hint { position: fixed; bottom: 20px; font-size: 10px; color: #ccc; opacity: 0; pointer-events: none; transition: opacity 0.3s;}
         body:hover #hint { opacity: 1; }
@@ -85,46 +94,44 @@
 <body ondblclick="toggleUI()">
 
     <div class="admin-panel" id="ui-panel">
-        <div class="control-item">背景<input type="color" id="p-bg" onchange="updateUI()"></div>
-        <div class="control-item">卡片<input type="color" id="p-card" onchange="updateUI()"></div>
-        <div class="control-item">文字<input type="color" id="p-text" onchange="updateUI()"></div>
-        <div class="control-item">強調<input type="color" id="p-accent" onchange="updateUI()"></div>
-        <div class="control-item">字體<input type="range" id="p-size" min="12" max="24" value="16" oninput="updateUI()"></div>
+        <div class="control-item">網頁底色<input type="color" id="p-bg" onchange="updateGlobalUI()"></div>
+        <div class="control-item">全域字體<input type="range" id="p-size" min="12" max="24" value="16" oninput="updateGlobalUI()"></div>
         <div class="divider"></div>
         <button class="btn-main" onclick="toggleEdit()" id="edit-btn">✏️ 編輯模式</button>
-        <button onclick="addCard()">＋ 新增</button>
+        <button onclick="addCard()">＋ 新增卡片</button>
         <button class="btn-share" onclick="saveAndCopyAll()">🔗 分享全部</button>
     </div>
 
     <div class="gallery" id="gallery"></div>
-    <div id="hint">點擊卡片切換正/反面｜雙擊背景隱藏面板</div>
+    <div id="hint">點擊翻轉｜雙擊背景隱藏工具欄</div>
 
     <script>
         let isEditing = false;
         let siteData = {
-            theme: { bg: "#fdfaf5", card: "#ffffff", accent: "#d4a373", text: "#4a4a4a", size: 16 },
-            cards: [{ title: "作品標題", img: "https://via.placeholder.com/300x420?text=Image", text: "點擊翻轉內容。" }]
+            global: { bg: "#fdfaf5", size: 16 },
+            cards: [{ 
+                title: "獨立配色範例", 
+                img: "https://duk.tw/images/2026/02/08/example.png", 
+                text: "翻到背面，你可以為這張卡片設定專屬的背景色與文字色！",
+                colors: { card: "#ffffff", text: "#4a4a4a", accent: "#d4a373" }
+            }]
         };
 
         function init() {
             const h = window.location.hash.substring(1);
-            const isEmbedded = window.self !== window.top;
-
             if (h.startsWith('data=')) {
                 document.body.classList.add('viewer-mode');
                 try {
-                    const base64 = h.replace('data=', '');
-                    siteData = JSON.parse(decodeURIComponent(escape(atob(base64))));
-                    // 若只有一張，進入置中模式
+                    siteData = JSON.parse(decodeURIComponent(escape(atob(h.replace('data=', '')))));
                     if (siteData.cards.length === 1) document.body.classList.add('single-card-view');
-                } catch(e) { console.error("Load Error", e); }
+                } catch(e) { console.error("Load Error"); }
             } else {
-                if (isEmbedded) document.body.classList.add('viewer-mode');
-                const local = localStorage.getItem('Gallery_V65_PortraitShare');
+                if (window.self !== window.top) document.body.classList.add('viewer-mode');
+                const local = localStorage.getItem('Gallery_V70_Independent');
                 if (local) siteData = JSON.parse(local);
             }
-            syncControls();
-            updateUI();
+            syncGlobalControls();
+            updateGlobalUI();
             render();
         }
 
@@ -135,28 +142,16 @@
             this.classList.toggle('is-flipped');
         }
 
-        function syncControls() {
-            document.getElementById('p-bg').value = siteData.theme.bg;
-            document.getElementById('p-card').value = siteData.theme.card || "#ffffff";
-            document.getElementById('p-text').value = siteData.theme.text;
-            document.getElementById('p-accent').value = siteData.theme.accent;
-            document.getElementById('p-size').value = siteData.theme.size;
+        function syncGlobalControls() {
+            document.getElementById('p-bg').value = siteData.global.bg;
+            document.getElementById('p-size').value = siteData.global.size;
         }
 
-        function updateUI() {
-            siteData.theme = {
-                bg: document.getElementById('p-bg').value,
-                card: document.getElementById('p-card').value,
-                accent: document.getElementById('p-accent').value,
-                text: document.getElementById('p-text').value,
-                size: document.getElementById('p-size').value
-            };
-            const r = document.documentElement.style;
-            r.setProperty('--bg-color', siteData.theme.bg);
-            r.setProperty('--card-bg', siteData.theme.card);
-            r.setProperty('--accent-color', siteData.theme.accent);
-            r.setProperty('--text-color', siteData.theme.text);
-            r.setProperty('--font-size-base', siteData.theme.size + 'px');
+        function updateGlobalUI() {
+            siteData.global.bg = document.getElementById('p-bg').value;
+            siteData.global.size = document.getElementById('p-size').value;
+            document.documentElement.style.setProperty('--bg-color', siteData.global.bg);
+            document.documentElement.style.setProperty('--font-size-base', siteData.global.size + 'px');
         }
 
         function render() {
@@ -164,6 +159,11 @@
             siteData.cards.forEach((c, i) => {
                 const cardDiv = document.createElement('div');
                 cardDiv.className = `card-container ${isEditing ? 'editing' : ''}`;
+                // 應用獨立顏色
+                cardDiv.style.setProperty('--c-card', c.colors.card);
+                cardDiv.style.setProperty('--c-text', c.colors.text);
+                cardDiv.style.setProperty('--c-accent', c.colors.accent);
+                
                 cardDiv.onclick = handleCardClick;
                 cardDiv.innerHTML = `
                     <div class="card-inner">
@@ -171,15 +171,29 @@
                         <div class="card-back">
                             <div class="title" contenteditable="${isEditing}" oninput="siteData.cards[${i}].title=this.innerText">${c.title}</div>
                             <div class="scroll-content" contenteditable="${isEditing}" oninput="siteData.cards[${i}].text=this.innerText">${c.text}</div>
+                            
                             <div class="edit-tools">
-                                <input type="text" class="img-url-input" placeholder="貼上網址或 HTML 代碼" value="${c.img}" oninput="smartUpdateImg(${i}, this.value)">
-                                <button class="btn-single-share" onclick="event.stopPropagation();saveAndCopySingle(${i})">🔗 分享此卡片</button>
-                                <button class="delete-btn" onclick="event.stopPropagation();siteData.cards.splice(${i},1);render()">刪除卡片</button>
+                                <div class="color-row">
+                                    <div class="color-pick-item">卡片<input type="color" value="${c.colors.card}" onchange="updateCardColor(${i}, 'card', this.value)"></div>
+                                    <div class="color-pick-item">文字<input type="color" value="${c.colors.text}" onchange="updateCardColor(${i}, 'text', this.value)"></div>
+                                    <div class="color-pick-item">強調<input type="color" value="${c.colors.accent}" onchange="updateCardColor(${i}, 'accent', this.value)"></div>
+                                </div>
+                                <input type="text" class="img-url-input" placeholder="貼上網址或 HTML" value="${c.img}" oninput="smartUpdateImg(${i}, this.value)">
+                                <div class="btn-row">
+                                    <button class="single-share-btn" onclick="event.stopPropagation();saveAndCopySingle(${i})">🔗 分享此卡</button>
+                                    <button class="delete-btn" onclick="event.stopPropagation();if(confirm('刪除？')){siteData.cards.splice(${i},1);render();}">刪除</button>
+                                </div>
                             </div>
                         </div>
                     </div>`;
                 g.appendChild(cardDiv);
             });
+        }
+
+        function updateCardColor(i, type, value) {
+            siteData.cards[i].colors[type] = value;
+            const card = document.querySelectorAll('.card-container')[i];
+            card.style.setProperty(`--c-${type}`, value);
         }
 
         function smartUpdateImg(i, input) {
@@ -198,28 +212,28 @@
             document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成" : "✏️ 編輯模式";
             if (!isEditing) {
                 document.querySelectorAll('.card-container').forEach(c => c.classList.remove('is-flipped'));
-                localStorage.setItem('Gallery_V65_PortraitShare', JSON.stringify(siteData));
+                localStorage.setItem('Gallery_V70_Independent', JSON.stringify(siteData));
             }
             render();
         }
 
         function addCard() {
-            siteData.cards.push({ title: "作品標題", img: "https://via.placeholder.com/300x420?text=New", text: "內容..." });
+            siteData.cards.push({ 
+                title: "作品標題", 
+                img: "https://via.placeholder.com/300x420?text=New", 
+                text: "內容...",
+                colors: { card: "#ffffff", text: "#4a4a4a", accent: "#d4a373" }
+            });
             render();
         }
 
-        // --- 分享單張邏輯 ---
         function saveAndCopySingle(i) {
-            const singleData = {
-                theme: siteData.theme,
-                cards: [siteData.cards[i]]
-            };
+            const singleData = { global: siteData.global, cards: [siteData.cards[i]] };
             const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(singleData))));
             const url = window.location.origin + window.location.pathname + "#data=" + b64;
-            navigator.clipboard.writeText(url).then(() => alert("🔗 單張直式卡片連結已複製！"));
+            navigator.clipboard.writeText(url).then(() => alert("🔗 單張卡片連結(含配色)已複製！"));
         }
 
-        // 分享全部
         function saveAndCopyAll() {
             const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
             const url = window.location.origin + window.location.pathname + "#data=" + b64;
