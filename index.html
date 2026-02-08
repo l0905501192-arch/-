@@ -25,6 +25,8 @@
             margin: 0; padding: 40px; min-height: 100vh; box-sizing: border-box;
             display: flex; flex-direction: column; align-items: center;
         }
+
+        /* --- 控制面板 --- */
         .admin-panel {
             background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
             padding: 15px 25px; border-radius: 40px;
@@ -37,12 +39,28 @@
         input[type="color"] { border: none; width: 22px; height: 22px; cursor: pointer; background: none; }
         input[type="range"] { width: 70px; accent-color: var(--accent-color); }
         .divider { border-left: 1px solid #ddd; height: 24px; margin: 0 5px; }
-        button { padding: 8px 18px; border-radius: 20px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
+        
+        button { padding: 8px 18px; border-radius: 20px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; }
         .btn-main { background: var(--accent-color); color: white; }
         .btn-share { background: #333; color: white; }
+        .btn-single-share { background: #6c5ce7; color: white; width: 100%; margin-top: 5px; }
+        button:hover { opacity: 0.8; transform: translateY(-1px); }
 
-        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; width: 100%; max-width: 1100px; }
-        .card-container { height: 420px; perspective: 1000px; cursor: pointer; }
+        /* --- 畫廊與佈局 --- */
+        .gallery { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 30px; width: 100%; max-width: 1100px; 
+            justify-content: center;
+        }
+        
+        /* 當只有一張卡片時，自動置中 */
+        .single-card-view .gallery {
+            display: flex;
+            justify-content: center;
+        }
+
+        .card-container { height: 420px; width: 100%; max-width: 300px; perspective: 1000px; cursor: pointer; }
         .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; border-radius: 20px; will-change: transform; }
         .card-container.is-flipped .card-inner { transform: rotateY(180deg); }
         .editing .card-inner { transform: rotateY(180deg) !important; }
@@ -55,10 +73,10 @@
         .scroll-content { flex-grow: 1; overflow-y: auto; font-size: var(--font-size-base); line-height: 1.8; color: var(--text-color); outline: none; white-space: pre-wrap; }
         .editing [contenteditable="true"] { pointer-events: auto; cursor: text; }
 
-        .edit-tools { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; display: none; pointer-events: auto; }
+        .edit-tools { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd; display: none; pointer-events: auto; }
         .editing .edit-tools { display: block; }
         .img-url-input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px; font-size: 11px; background: rgba(0,0,0,0.03); }
-        .delete-btn { background:#ff7675; color:white; padding:6px 12px; font-size:11px; border:none; border-radius:8px; cursor:pointer; width: 100%; }
+        .delete-btn { background:#ff7675; color:white; padding:6px 12px; font-size:11px; border:none; border-radius:8px; cursor:pointer; width: 100%; margin-top: 5px; }
         
         #hint { position: fixed; bottom: 20px; font-size: 10px; color: #ccc; opacity: 0; pointer-events: none; transition: opacity 0.3s;}
         body:hover #hint { opacity: 1; }
@@ -75,7 +93,7 @@
         <div class="divider"></div>
         <button class="btn-main" onclick="toggleEdit()" id="edit-btn">✏️ 編輯模式</button>
         <button onclick="addCard()">＋ 新增</button>
-        <button class="btn-share" onclick="saveAndCopy()">🔗 產生分享連結</button>
+        <button class="btn-share" onclick="saveAndCopyAll()">🔗 分享全部</button>
     </div>
 
     <div class="gallery" id="gallery"></div>
@@ -97,10 +115,12 @@
                 try {
                     const base64 = h.replace('data=', '');
                     siteData = JSON.parse(decodeURIComponent(escape(atob(base64))));
+                    // 若只有一張，進入置中模式
+                    if (siteData.cards.length === 1) document.body.classList.add('single-card-view');
                 } catch(e) { console.error("Load Error", e); }
             } else {
                 if (isEmbedded) document.body.classList.add('viewer-mode');
-                const local = localStorage.getItem('Gallery_V56');
+                const local = localStorage.getItem('Gallery_V65_PortraitShare');
                 if (local) siteData = JSON.parse(local);
             }
             syncControls();
@@ -153,6 +173,7 @@
                             <div class="scroll-content" contenteditable="${isEditing}" oninput="siteData.cards[${i}].text=this.innerText">${c.text}</div>
                             <div class="edit-tools">
                                 <input type="text" class="img-url-input" placeholder="貼上網址或 HTML 代碼" value="${c.img}" oninput="smartUpdateImg(${i}, this.value)">
+                                <button class="btn-single-share" onclick="event.stopPropagation();saveAndCopySingle(${i})">🔗 分享此卡片</button>
                                 <button class="delete-btn" onclick="event.stopPropagation();siteData.cards.splice(${i},1);render()">刪除卡片</button>
                             </div>
                         </div>
@@ -161,10 +182,8 @@
             });
         }
 
-        // --- 智慧辨識功能：自動從 HTML 提取網址 ---
         function smartUpdateImg(i, input) {
             let url = input.trim();
-            // 如果輸入包含 <img，則嘗試抓取 src 裡面的網址
             if (url.includes('<img')) {
                 const match = url.match(/src=["']([^"']+)["']/);
                 if (match && match[1]) url = match[1];
@@ -179,7 +198,7 @@
             document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成" : "✏️ 編輯模式";
             if (!isEditing) {
                 document.querySelectorAll('.card-container').forEach(c => c.classList.remove('is-flipped'));
-                localStorage.setItem('Gallery_V56', JSON.stringify(siteData));
+                localStorage.setItem('Gallery_V65_PortraitShare', JSON.stringify(siteData));
             }
             render();
         }
@@ -189,12 +208,22 @@
             render();
         }
 
-        function saveAndCopy() {
-            try {
-                const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
-                const shareUrl = window.location.origin + window.location.pathname + "#data=" + b64;
-                navigator.clipboard.writeText(shareUrl).then(() => alert("🔗 連結已成功複製！"));
-            } catch (e) { alert("失敗"); }
+        // --- 分享單張邏輯 ---
+        function saveAndCopySingle(i) {
+            const singleData = {
+                theme: siteData.theme,
+                cards: [siteData.cards[i]]
+            };
+            const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(singleData))));
+            const url = window.location.origin + window.location.pathname + "#data=" + b64;
+            navigator.clipboard.writeText(url).then(() => alert("🔗 單張直式卡片連結已複製！"));
+        }
+
+        // 分享全部
+        function saveAndCopyAll() {
+            const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
+            const url = window.location.origin + window.location.pathname + "#data=" + b64;
+            navigator.clipboard.writeText(url).then(() => alert("🔗 完整作品集連結已複製！"));
         }
 
         init();
