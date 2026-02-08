@@ -41,17 +41,17 @@
         .btn-share { background: #333; color: white; }
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; width: 100%; max-width: 1100px; }
         
-        /* --- 卡片結構 --- */
         .card-container { height: 420px; perspective: 1000px; cursor: pointer; }
         .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; border-radius: 20px; }
-        
         .card-container.is-flipped .card-inner { transform: rotateY(180deg); }
         .editing .card-inner { transform: rotateY(180deg) !important; }
 
         .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); background: var(--card-bg); overflow: hidden; transition: background 0.3s; }
-        .card-front img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-        .card-back { transform: rotateY(180deg); display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; }
         
+        /* 修正重點：加入 referrerpolicy */
+        .card-front img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        
+        .card-back { transform: rotateY(180deg); display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; }
         .title { font-family: 'Playfair Display', serif; font-size: calc(var(--font-size-base) * 1.6); color: var(--accent-color); margin-bottom: 12px; outline: none; border-bottom: 1px solid transparent; }
         .scroll-content { flex-grow: 1; overflow-y: auto; font-size: var(--font-size-base); line-height: 1.8; color: var(--text-color); outline: none; white-space: pre-wrap; }
         
@@ -85,11 +85,7 @@
         let isEditing = false;
         let siteData = {
             theme: { bg: "#fdfaf5", card: "#ffffff", accent: "#d4a373", text: "#4a4a4a", size: 16 },
-            cards: [{ 
-                title: "作品標題", 
-                img: "https://duk.tw/images/2026/02/08/example.png", 
-                text: "文章內容，再次點擊可翻回圖片面。" 
-            }]
+            cards: [{ title: "作品標題", img: "https://duk.tw/images/2026/02/08/example.png", text: "文章內容，再次點擊可翻回圖片面。" }]
         };
 
         function init() {
@@ -115,20 +111,14 @@
         }
 
         function loadFromLocal() {
-            const local = localStorage.getItem('Gallery_V51');
+            const local = localStorage.getItem('Gallery_V52_Final');
             if (local) siteData = JSON.parse(local);
         }
 
         function toggleUI() { document.body.classList.toggle('viewer-mode'); }
 
-        // --- 優化後的翻轉邏輯 ---
         function handleCardClick(element, event) {
-            // 編輯模式下不觸發翻轉，讓使用者可以點擊輸入框
-            if (isEditing) return;
-
-            // 檢查是否點擊在背面的文字滾動區
-            // 若想讓點擊文字也能翻轉，則直接 toggle。
-            // 這裡設定為點擊卡片任何地方都 toggle。
+            if (isEditing || event.target.closest('.edit-tools') || event.target.closest('.scroll-content') || event.target.closest('.title')) return;
             element.classList.toggle('is-flipped');
         }
 
@@ -159,10 +149,11 @@
         function render() {
             const g = document.getElementById('gallery'); g.innerHTML = '';
             siteData.cards.forEach((c, i) => {
+                // 修正重點：img 標籤加入 referrerpolicy="no-referrer"
                 g.innerHTML += `
                     <div class="card-container ${isEditing ? 'editing' : ''}" onclick="handleCardClick(this, event)">
                         <div class="card-inner">
-                            <div class="card-front"><img src="${c.img}" id="img-p-${i}"></div>
+                            <div class="card-front"><img src="${c.img}" id="img-p-${i}" referrerpolicy="no-referrer"></div>
                             <div class="card-back">
                                 <div class="title" contenteditable="${isEditing}" oninput="siteData.cards[${i}].title=this.innerText">${c.title}</div>
                                 <div class="scroll-content" contenteditable="${isEditing}" oninput="siteData.cards[${i}].text=this.innerText">${c.text}</div>
@@ -186,15 +177,14 @@
             isEditing = !isEditing;
             document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成" : "✏️ 編輯模式";
             if (!isEditing) {
-                // 退出編輯時移除所有翻轉 class，回歸正面
                 document.querySelectorAll('.card-container').forEach(c => c.classList.remove('is-flipped'));
-                localStorage.setItem('Gallery_V51', JSON.stringify(siteData));
+                localStorage.setItem('Gallery_V52_Final', JSON.stringify(siteData));
             }
             render();
         }
 
         function addCard() {
-            siteData.cards.push({ title: "作品標題", img: "https://via.placeholder.com/300x420?text=New+Image", text: "文章內容，再次點擊可翻回圖片面。" });
+            siteData.cards.push({ title: "作品標題", img: "https://via.placeholder.com/300x420?text=Image", text: "內容..." });
             render();
         }
 
@@ -203,7 +193,7 @@
                 const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
                 const shareUrl = window.location.origin + window.location.pathname + "#data=" + b64;
                 navigator.clipboard.writeText(shareUrl).then(() => {
-                    alert("🔗 連結已成功複製！\n現在點擊卡片可以隨意在正反面切換。");
+                    alert("🔗 連結已成功複製！\n\n小提醒：若圖片仍未顯示，請確認您使用的是 duk.tw 的「直接連結」。");
                 });
             } catch (e) { alert("連結產生失敗。"); }
         }
