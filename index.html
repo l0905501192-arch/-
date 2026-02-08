@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>圖文展示插件 - 完整編輯版</title>
+    <title>圖文展示插件 - 極致自定義版</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <style id="theme-style">
         :root {
@@ -15,13 +15,13 @@
         }
     </style>
     <style>
-        /* --- 基礎設定 --- */
         body {
             background-color: var(--bg-color); color: var(--text-color);
-            font-family: 'Noto Sans TC', sans-serif; transition: background 0.3s;
+            font-family: 'Noto Sans TC', sans-serif; transition: all 0.3s ease;
             margin: 0; padding: 40px; min-height: 100vh; box-sizing: border-box;
             display: flex; flex-direction: column; align-items: center;
         }
+
         /* --- 頂部控制面板 --- */
         .admin-panel {
             background: white; padding: 15px 25px; border-radius: 40px;
@@ -30,12 +30,12 @@
             flex-wrap: wrap; justify-content: center; border: 1px solid #eee;
         }
         .control-item { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: bold; color: #555; }
-        input[type="color"] { border: none; width: 22px; height: 22px; cursor: pointer; background: none; }
-        input[type="range"] { width: 80px; accent-color: var(--accent-color); }
+        input[type="color"] { border: none; width: 22px; height: 22px; cursor: pointer; background: none; padding: 0; }
+        input[type="range"] { width: 70px; accent-color: var(--accent-color); }
         .divider { border-left: 1px solid #ddd; height: 24px; margin: 0 5px; }
         
         button {
-            padding: 8px 20px; border-radius: 20px; border: none; cursor: pointer;
+            padding: 8px 18px; border-radius: 20px; border: none; cursor: pointer;
             font-weight: 600; transition: 0.2s; font-size: 13px;
         }
         .btn-main { background: var(--accent-color); color: white; }
@@ -49,15 +49,14 @@
             position: relative; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d; border-radius: 20px;
         }
-        /* 翻轉邏輯：滑鼠懸停或編輯模式下翻轉 */
         .card-container:not(.editing):hover .card-inner, .editing .card-inner { transform: rotateY(180deg); }
 
         .card-front, .card-back {
             position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
             border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-            background: var(--card-bg); overflow: hidden;
+            background: var(--card-bg); overflow: hidden; transition: background 0.3s;
         }
-        .card-front img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
+        .card-front img { width: 100%; height: 100%; object-fit: cover; }
         .card-back { transform: rotateY(180deg); display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; }
 
         /* --- 內容區 --- */
@@ -69,28 +68,19 @@
             flex-grow: 1; overflow-y: auto; font-size: var(--font-size-base); 
             line-height: 1.8; color: var(--text-color); outline: none; white-space: pre-wrap; 
         }
-        [contenteditable="true"]:focus { border-bottom: 1px dashed var(--accent-color); background: rgba(0,0,0,0.02); }
+        [contenteditable="true"]:focus { border-bottom: 1px dashed var(--accent-color); background: rgba(0,0,0,0.03); }
 
-        /* --- 編輯工具列 (本次新增重點) --- */
+        /* --- 編輯工具列 --- */
         .edit-tools { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; display: none; }
         .editing .edit-tools { display: block; }
         
-        /* 新增：網址輸入框樣式 */
         .img-url-input {
             width: 100%; box-sizing: border-box; padding: 8px 10px; 
             margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px;
-            font-size: 12px; color: #666; background: #f9f9f9;
+            font-size: 11px; color: #666; background: rgba(0,0,0,0.02);
         }
         .img-url-input:focus { border-color: var(--accent-color); outline: none; background: white; }
-
-        /* 上傳按鈕與其他控制項 */
-        .upload-btn { 
-            display: inline-flex; align-items: center; gap: 5px; background: #f0f0f0; padding: 6px 12px; 
-            border-radius: 8px; font-size: 11px; cursor: pointer; color: #555; transition: 0.2s;
-        }
-        .upload-btn:hover { background: #e0e0e0; }
-        .loading { display: none; font-size: 11px; color: var(--accent-color); margin-left: 8px; font-weight: bold; }
-        .delete-btn { background:#ff7675; color:white; padding:6px 12px; font-size:11px; border:none; border-radius:8px; cursor:pointer; }
+        .delete-btn { background:#ff7675; color:white; padding:6px 12px; font-size:11px; border:none; border-radius:8px; cursor:pointer; width: 100%; }
 
         /* 捲軸美化 */
         .scroll-content::-webkit-scrollbar { width: 3px; }
@@ -100,7 +90,8 @@
 <body>
 
     <div class="admin-panel">
-        <div class="control-item">底色<input type="color" id="p-bg" onchange="updateUI()"></div>
+        <div class="control-item">背景<input type="color" id="p-bg" onchange="updateUI()"></div>
+        <div class="control-item">卡片<input type="color" id="p-card" onchange="updateUI()"></div>
         <div class="control-item">文字<input type="color" id="p-text" onchange="updateUI()"></div>
         <div class="control-item">強調<input type="color" id="p-accent" onchange="updateUI()"></div>
         <div class="control-item">字體<input type="range" id="p-size" min="12" max="24" value="15" oninput="updateUI()"></div>
@@ -113,22 +104,18 @@
     <div class="gallery" id="gallery"></div>
 
     <script>
-        // 🔥🔥🔥 請在此填入您的 Duk.tw API Key 以啟用自動上傳功能 🔥🔥🔥
-        const DUK_API_KEY = 'YOUR_API_KEY_HERE'; 
-
         let isEditing = false;
         let siteData = {
             theme: { bg: "#fdfaf5", card: "#ffffff", accent: "#d4a373", text: "#4a4a4a", size: 15 },
-            cards: [{ title: "歡迎使用", img: "https://duk.tw/images/2026/02/08/example.png", text: "點擊上方「編輯模式」即可開始。\n\n現在您可以選擇「手動貼上網址」或「自動上傳圖片」了！" }]
+            cards: [{ title: "範例作品", img: "https://duk.tw/images/2026/02/08/example.png", text: "進入編輯模式後，可以直接貼上新的圖片網址。\n也可以在上方調整卡片底色與字體大小。" }]
         };
 
-        // 初始化：從網址或本地讀取資料
         function init() {
             const h = window.location.hash.substring(1);
             if (h.startsWith('data=')) {
-                try { siteData = JSON.parse(decodeURIComponent(escape(atob(h.replace('data=', ''))))); } catch(e) { console.error('Data parse error', e); }
+                try { siteData = JSON.parse(decodeURIComponent(escape(atob(h.replace('data=', ''))))); } catch(e) { console.error(e); }
             } else {
-                const local = localStorage.getItem('DukGalleryV6_Complete');
+                const local = localStorage.getItem('CustomGalleryV7');
                 if (local) siteData = JSON.parse(local);
             }
             syncControls();
@@ -136,50 +123,43 @@
             render();
         }
 
-        // 同步控制面板數值
         function syncControls() {
             document.getElementById('p-bg').value = siteData.theme.bg;
+            document.getElementById('p-card').value = siteData.theme.card || "#ffffff";
             document.getElementById('p-text').value = siteData.theme.text;
             document.getElementById('p-accent').value = siteData.theme.accent;
             document.getElementById('p-size').value = siteData.theme.size;
         }
 
-        // 更新主題樣式
         function updateUI() {
             siteData.theme = {
                 bg: document.getElementById('p-bg').value,
-                card: "#ffffff", 
+                card: document.getElementById('p-card').value,
                 accent: document.getElementById('p-accent').value,
                 text: document.getElementById('p-text').value,
                 size: document.getElementById('p-size').value
             };
             const r = document.documentElement.style;
             r.setProperty('--bg-color', siteData.theme.bg);
+            r.setProperty('--card-bg', siteData.theme.card);
             r.setProperty('--accent-color', siteData.theme.accent);
             r.setProperty('--text-color', siteData.theme.text);
             r.setProperty('--font-size-base', siteData.theme.size + 'px');
         }
 
-        // 渲染卡片 HTML
         function render() {
             const g = document.getElementById('gallery'); g.innerHTML = '';
             siteData.cards.forEach((c, i) => {
                 g.innerHTML += `
                     <div class="card-container ${isEditing ? 'editing' : ''}">
                         <div class="card-inner">
-                            <div class="card-front"><img src="${c.img}" id="img-preview-${i}"></div>
+                            <div class="card-front"><img src="${c.img}" id="img-p-${i}"></div>
                             <div class="card-back">
                                 <div class="title" contenteditable="${isEditing}" oninput="siteData.cards[${i}].title=this.innerText">${c.title}</div>
                                 <div class="scroll-content" contenteditable="${isEditing}" oninput="siteData.cards[${i}].text=this.innerText">${c.text}</div>
-                                
                                 <div class="edit-tools">
-                                    <input type="text" class="img-url-input" placeholder="在此貼上圖片網址 (例如 https://duk.tw/...)" value="${c.img}" oninput="updateImageManual(${i}, this.value)">
-                                    
-                                    <div style="display:flex; align-items:center; justify-content:space-between; margin-top:5px;">
-                                        <label class="upload-btn">📁 自動上傳<input type="file" hidden onchange="uploadToDuk(event, ${i})"></label>
-                                        <span id="load-${i}" class="loading">上傳中...</span>
-                                        <button class="delete-btn" onclick="siteData.cards.splice(${i},1);render()">刪除卡片</button>
-                                    </div>
+                                    <input type="text" class="img-url-input" placeholder="貼上圖片網址" value="${c.img}" oninput="updateImg(${i}, this.value)">
+                                    <button class="delete-btn" onclick="siteData.cards.splice(${i},1);render()">刪除此卡片</button>
                                 </div>
                             </div>
                         </div>
@@ -187,58 +167,29 @@
             });
         }
 
-        // 手動更新圖片網址
-        function updateImageManual(i, url) {
+        function updateImg(i, url) {
             siteData.cards[i].img = url;
-            document.getElementById(`img-preview-${i}`).src = url;
+            document.getElementById(`img-p-${i}`).src = url;
         }
 
-        // 自動上傳至 Duk.tw
-        async function uploadToDuk(e, i) {
-            const file = e.target.files[0]; if (!file) return;
-            if (DUK_API_KEY === 'YOUR_API_KEY_HERE' || DUK_API_KEY === '') return alert("請先在程式碼第 156 行填入您的 Duk.tw API Key 才能使用自動上傳功能！");
-
-            const load = document.getElementById(`load-${i}`); load.style.display = 'inline';
-            const fd = new FormData();
-            fd.append('key', DUK_API_KEY);
-            fd.append('source', file);
-            fd.append('format', 'json');
-
-            try {
-                const res = await fetch('https://duk.tw/api/1/upload', { method: 'POST', body: fd });
-                const json = await res.json();
-                if (json.status_code === 200) {
-                    // 上傳成功，自動填入網址並更新預覽
-                    siteData.cards[i].img = json.image.url;
-                    render(); // 重新渲染以更新輸入框的值
-                    alert("✅ 圖片上傳成功！網址已自動填入。");
-                } else { throw new Error(json.error.message); }
-            } catch (err) { alert("上傳失敗: " + err.message + "\n請檢查 API Key 或網路狀態。"); }
-            finally { load.style.display = 'none'; }
-        }
-
-        // 切換編輯模式
         function toggleEdit() {
             isEditing = !isEditing;
-            document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成編輯" : "✏️ 編輯模式";
-            if (!isEditing) localStorage.setItem('DukGalleryV6_Complete', JSON.stringify(siteData));
+            document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成" : "✏️ 編輯模式";
+            if (!isEditing) localStorage.setItem('CustomGalleryV7', JSON.stringify(siteData));
             render();
         }
 
-        // 新增卡片
         function addCard() {
-            siteData.cards.push({ title: "新標題", img: "https://via.placeholder.com/300x420?text=Paste+URL+Here", text: "請輸入內容..." });
+            siteData.cards.push({ title: "新作品", img: "https://via.placeholder.com/300x420?text=New+Image", text: "在此輸入內容..." });
             render();
         }
 
-        // 產生獨立網址
         function saveAndCopy() {
             const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
             const url = window.location.origin + window.location.pathname + "#data=" + b64;
-            navigator.clipboard.writeText(url).then(() => alert("🔗 獨立網址已複製！\n\n您可以將此連結傳送給任何人，他們將看到您編輯後的完整內容。"));
+            navigator.clipboard.writeText(url).then(() => alert("🔗 連結已複製！現在您可以分享這個專屬網址了。"));
         }
 
-        // 啟動
         init();
     </script>
 </body>
