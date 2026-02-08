@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>個人圖文展示集</title>
-    
     <meta name="referrer" content="no-referrer">
-    
-    <meta name="description" content="個人圖文創作展示作品集">
+    <meta name="description" content="個人圖文展示作品集">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     
@@ -23,7 +21,7 @@
     <style>
         body {
             background-color: var(--bg-color); color: var(--text-color);
-            font-family: 'Noto Sans TC', sans-serif; transition: all 0.3s ease;
+            font-family: 'Noto Sans TC', sans-serif; transition: background 0.3s;
             margin: 0; padding: 40px; min-height: 100vh; box-sizing: border-box;
             display: flex; flex-direction: column; align-items: center;
         }
@@ -36,20 +34,33 @@
         }
         .viewer-mode .admin-panel { display: none; }
         .control-item { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: bold; color: #555; }
-        input[type="color"] { border: none; width: 22px; height: 22px; cursor: pointer; background: none; padding: 0; }
+        input[type="color"] { border: none; width: 22px; height: 22px; cursor: pointer; background: none; }
         input[type="range"] { width: 70px; accent-color: var(--accent-color); }
         .divider { border-left: 1px solid #ddd; height: 24px; margin: 0 5px; }
-        button { padding: 8px 18px; border-radius: 20px; border: none; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 13px; }
+        button { padding: 8px 18px; border-radius: 20px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
         .btn-main { background: var(--accent-color); color: white; }
         .btn-share { background: #333; color: white; }
+
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; width: 100%; max-width: 1100px; }
         
+        /* --- 卡片優化：硬體加速 --- */
         .card-container { height: 420px; perspective: 1000px; cursor: pointer; }
-        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; border-radius: 20px; }
+        .card-inner { 
+            position: relative; width: 100%; height: 100%; 
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); 
+            transform-style: preserve-3d; border-radius: 20px;
+            will-change: transform; /* 告訴瀏覽器準備進行動畫優化 */
+        }
+        
         .card-container.is-flipped .card-inner { transform: rotateY(180deg); }
         .editing .card-inner { transform: rotateY(180deg) !important; }
 
-        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); background: var(--card-bg); overflow: hidden; transition: background 0.3s; }
+        .card-front, .card-back { 
+            position: absolute; width: 100%; height: 100%; 
+            backface-visibility: hidden; border-radius: 20px; 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08); background: var(--card-bg); 
+            overflow: hidden; 
+        }
         .card-front img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
         .card-back { transform: rotateY(180deg); display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; }
         
@@ -58,7 +69,7 @@
         
         .edit-tools { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; display: none; }
         .editing .edit-tools { display: block; }
-        .img-url-input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px; font-size: 11px; color: #666; background: rgba(0,0,0,0.03); }
+        .img-url-input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px; font-size: 11px; background: rgba(0,0,0,0.03); }
         .delete-btn { background:#ff7675; color:white; padding:6px 12px; font-size:11px; border:none; border-radius:8px; cursor:pointer; width: 100%; }
         
         #hint { position: fixed; bottom: 20px; font-size: 10px; color: #ccc; opacity: 0; pointer-events: none; }
@@ -80,13 +91,13 @@
     </div>
 
     <div class="gallery" id="gallery"></div>
-    <div id="hint">點擊卡片切換正反面｜雙擊空白處隱藏工具欄</div>
+    <div id="hint">點擊卡片翻轉正/反面｜雙擊背景隱藏面板</div>
 
     <script>
         let isEditing = false;
         let siteData = {
             theme: { bg: "#fdfaf5", card: "#ffffff", accent: "#d4a373", text: "#4a4a4a", size: 16 },
-            cards: [{ title: "作品標題", img: "https://via.placeholder.com/300x420?text=Paste+Image+URL", text: "文章內容，再次點擊可翻回圖片面。" }]
+            cards: [{ title: "作品標題", img: "https://via.placeholder.com/300x420?text=Paste+Image+URL", text: "點擊可切換正反面。" }]
         };
 
         function init() {
@@ -96,31 +107,28 @@
             if (h.startsWith('data=')) {
                 document.body.classList.add('viewer-mode');
                 try {
-                    const base64Data = h.replace('data=', '');
-                    siteData = JSON.parse(decodeURIComponent(escape(atob(base64Data))));
-                } catch(e) { console.error("Data decode error", e); }
-            } else if (isEmbedded) {
-                document.body.classList.add('viewer-mode');
-                loadFromLocal();
+                    siteData = JSON.parse(decodeURIComponent(escape(atob(h.replace('data=', '')))));
+                } catch(e) { console.error("Data Load Error"); }
             } else {
-                document.body.classList.remove('viewer-mode');
-                loadFromLocal();
+                if (isEmbedded) document.body.classList.add('viewer-mode');
+                const local = localStorage.getItem('Gallery_V54_Fast');
+                if (local) siteData = JSON.parse(local);
             }
             syncControls();
             updateUI();
             render();
         }
 
-        function loadFromLocal() {
-            const local = localStorage.getItem('Gallery_V53_Universal');
-            if (local) siteData = JSON.parse(local);
-        }
-
         function toggleUI() { document.body.classList.toggle('viewer-mode'); }
 
-        function handleCardClick(element, event) {
-            if (isEditing || event.target.closest('.edit-tools') || event.target.closest('.scroll-content') || event.target.closest('.title')) return;
-            element.classList.toggle('is-flipped');
+        // --- 點擊翻轉邏輯：支援雙向翻轉 ---
+        function handleCardClick(event) {
+            const card = event.currentTarget;
+            // 編輯模式或點擊輸入框/標題時不翻轉
+            if (isEditing || event.target.closest('.edit-tools') || event.target.closest('.scroll-content') || event.target.closest('.title')) {
+                return;
+            }
+            card.classList.toggle('is-flipped');
         }
 
         function syncControls() {
@@ -148,29 +156,33 @@
         }
 
         function render() {
-            const g = document.getElementById('gallery'); g.innerHTML = '';
+            const g = document.getElementById('gallery'); 
+            g.innerHTML = ''; // 清空重繪
             siteData.cards.forEach((c, i) => {
-                // 這裡加入 referrerpolicy="no-referrer"
-                g.innerHTML += `
-                    <div class="card-container ${isEditing ? 'editing' : ''}" onclick="handleCardClick(this, event)">
-                        <div class="card-inner">
-                            <div class="card-front"><img src="${c.img}" id="img-p-${i}" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/300x420?text=Link+Error'"></div>
-                            <div class="card-back">
-                                <div class="title" contenteditable="${isEditing}" oninput="siteData.cards[${i}].title=this.innerText">${c.title}</div>
-                                <div class="scroll-content" contenteditable="${isEditing}" oninput="siteData.cards[${i}].text=this.innerText">${c.text}</div>
-                                <div class="edit-tools">
-                                    <input type="text" class="img-url-input" placeholder="請貼上『直接連結』(網址結尾為 .jpg 或 .png)" value="${c.img}" oninput="updateImg(${i}, this.value)">
-                                    <button class="delete-btn" onclick="siteData.cards.splice(${i},1);render()">刪除卡片</button>
-                                </div>
+                const cardDiv = document.createElement('div');
+                cardDiv.className = `card-container ${isEditing ? 'editing' : ''}`;
+                cardDiv.onclick = handleCardClick;
+                cardDiv.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-front"><img src="${c.img}" referrerpolicy="no-referrer" loading="lazy"></div>
+                        <div class="card-back">
+                            <div class="title" contenteditable="${isEditing}" oninput="siteData.cards[${i}].title=this.innerText">${c.title}</div>
+                            <div class="scroll-content" contenteditable="${isEditing}" oninput="siteData.cards[${i}].text=this.innerText">${c.text}</div>
+                            <div class="edit-tools">
+                                <input type="text" class="img-url-input" placeholder="貼上圖片連結" value="${c.img}" oninput="updateImg(${i}, this.value)">
+                                <button class="delete-btn" onclick="siteData.cards.splice(${i},1);render()">刪除卡片</button>
                             </div>
                         </div>
                     </div>`;
+                g.appendChild(cardDiv);
             });
         }
 
         function updateImg(i, url) { 
             siteData.cards[i].img = url; 
-            const img = document.getElementById(`img-p-${i}`);
+            // 局部更新圖片，不重繪整張卡片以提升效能
+            const container = document.querySelectorAll('.card-container')[i];
+            const img = container.querySelector('img');
             if(img) img.src = url; 
         }
 
@@ -179,24 +191,22 @@
             document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成" : "✏️ 編輯模式";
             if (!isEditing) {
                 document.querySelectorAll('.card-container').forEach(c => c.classList.remove('is-flipped'));
-                localStorage.setItem('Gallery_V53_Universal', JSON.stringify(siteData));
+                localStorage.setItem('Gallery_V54_Fast', JSON.stringify(siteData));
             }
             render();
         }
 
         function addCard() {
-            siteData.cards.push({ title: "作品標題", img: "https://via.placeholder.com/300x420?text=Paste+Image+URL", text: "文章內容，點擊可翻轉。" });
+            siteData.cards.push({ title: "新標題", img: "https://via.placeholder.com/300x420?text=New", text: "點擊翻轉查看內容。" });
             render();
         }
 
         function saveAndCopy() {
-            try {
-                const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
-                const shareUrl = window.location.origin + window.location.pathname + "#data=" + b64;
-                navigator.clipboard.writeText(shareUrl).then(() => {
-                    alert("🔗 分享連結已成功複製！\n\n小提醒：請確保圖片連結是『直接連結』(網址結尾為 .jpg 或 .png)。");
-                });
-            } catch (e) { alert("連結產生失敗。"); }
+            const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
+            const shareUrl = window.location.origin + window.location.pathname + "#data=" + b64;
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                alert("🔗 連結已成功複製！\n建議：若連結過長導致讀取緩慢，請至 Lihi.io 縮短後再分享。");
+            });
         }
 
         init();
