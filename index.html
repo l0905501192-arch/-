@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>個人圖文展示集</title>
-    <meta name="description" content="這是一個用於展示個人圖文創作的精美插件網頁。">
-    <meta name="author" content="Gallery Plugin User">
-    
+    <meta name="description" content="個人圖文創作展示作品集">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
-    
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     
     <style id="theme-style">
@@ -27,8 +24,6 @@
             margin: 0; padding: 40px; min-height: 100vh; box-sizing: border-box;
             display: flex; flex-direction: column; align-items: center;
         }
-
-        /* --- 頂部控制面板 --- */
         .admin-panel {
             background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
             padding: 15px 25px; border-radius: 40px;
@@ -36,59 +31,27 @@
             align-items: center; margin-bottom: 40px; position: sticky; top: 20px; z-index: 1000;
             flex-wrap: wrap; justify-content: center; border: 1px solid #eee;
         }
-
-        /* 隱藏邏輯：當 body 具有 viewer-mode 類別時隱藏 */
         .viewer-mode .admin-panel { display: none; }
-
         .control-item { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: bold; color: #555; }
         input[type="color"] { border: none; width: 22px; height: 22px; cursor: pointer; background: none; padding: 0; }
         input[type="range"] { width: 70px; accent-color: var(--accent-color); }
         .divider { border-left: 1px solid #ddd; height: 24px; margin: 0 5px; }
-        
-        button {
-            padding: 8px 18px; border-radius: 20px; border: none; cursor: pointer;
-            font-weight: 600; transition: 0.2s; font-size: 13px;
-        }
+        button { padding: 8px 18px; border-radius: 20px; border: none; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 13px; }
         .btn-main { background: var(--accent-color); color: white; }
         .btn-share { background: #333; color: white; }
-        button:hover { opacity: 0.9; transform: translateY(-1px); }
-
-        /* --- 畫廊與卡片佈局 --- */
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; width: 100%; max-width: 1100px; }
         .card-container { height: 420px; perspective: 1000px; }
-        .card-inner {
-            position: relative; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-style: preserve-3d; border-radius: 20px;
-        }
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; border-radius: 20px; }
         .card-container:not(.editing):hover .card-inner, .editing .card-inner { transform: rotateY(180deg); }
-
-        .card-front, .card-back {
-            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
-            border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-            background: var(--card-bg); overflow: hidden; transition: background 0.3s;
-        }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); background: var(--card-bg); overflow: hidden; transition: background 0.3s; }
         .card-front img { width: 100%; height: 100%; object-fit: cover; }
         .card-back { transform: rotateY(180deg); display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; }
-
-        .title { 
-            font-family: 'Playfair Display', serif; font-size: calc(var(--font-size-base) * 1.6); 
-            color: var(--accent-color); margin-bottom: 12px; outline: none; border-bottom: 1px solid transparent;
-        }
-        .scroll-content { 
-            flex-grow: 1; overflow-y: auto; font-size: var(--font-size-base); 
-            line-height: 1.8; color: var(--text-color); outline: none; white-space: pre-wrap; 
-        }
-
-        /* --- 編輯功能工具 --- */
+        .title { font-family: 'Playfair Display', serif; font-size: calc(var(--font-size-base) * 1.6); color: var(--accent-color); margin-bottom: 12px; outline: none; border-bottom: 1px solid transparent; }
+        .scroll-content { flex-grow: 1; overflow-y: auto; font-size: var(--font-size-base); line-height: 1.8; color: var(--text-color); outline: none; white-space: pre-wrap; }
         .edit-tools { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; display: none; }
         .editing .edit-tools { display: block; }
-        .img-url-input {
-            width: 100%; box-sizing: border-box; padding: 8px 10px; 
-            margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px;
-            font-size: 11px; color: #666; background: rgba(0,0,0,0.03);
-        }
+        .img-url-input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px; font-size: 11px; color: #666; background: rgba(0,0,0,0.03); }
         .delete-btn { background:#ff7675; color:white; padding:6px 12px; font-size:11px; border:none; border-radius:8px; cursor:pointer; width: 100%; }
-
         #hint { position: fixed; bottom: 20px; font-size: 10px; color: #ccc; opacity: 0; pointer-events: none; }
         body:hover #hint { opacity: 1; }
     </style>
@@ -114,26 +77,23 @@
         let isEditing = false;
         let siteData = {
             theme: { bg: "#fdfaf5", card: "#ffffff", accent: "#d4a373", text: "#4a4a4a", size: 16 },
-            cards: [{ title: "作品名稱", img: "https://duk.tw/images/2026/02/08/example.png", text: "點擊編輯模式開始創作。\n分享連結已針對 Notion 進行隱藏優化。" }]
+            cards: [{ title: "作品名稱", img: "https://duk.tw/images/2026/02/08/example.png", text: "點擊編輯模式開始創作。" }]
         };
 
         function init() {
             const h = window.location.hash.substring(1);
-            const isEmbedded = window.self !== window.top; // 偵測是否在 iframe 內
+            const isEmbedded = window.self !== window.top;
 
             if (h.startsWith('data=')) {
-                // 訪客模式
                 document.body.classList.add('viewer-mode');
                 try {
                     const base64Data = h.replace('data=', '');
                     siteData = JSON.parse(decodeURIComponent(escape(atob(base64Data))));
                 } catch(e) { console.error("Data decode error", e); }
             } else if (isEmbedded) {
-                // 嵌入模式預設隱藏面板
                 document.body.classList.add('viewer-mode');
                 loadFromLocal();
             } else {
-                // 編輯模式
                 document.body.classList.remove('viewer-mode');
                 loadFromLocal();
             }
@@ -143,7 +103,7 @@
         }
 
         function loadFromLocal() {
-            const local = localStorage.getItem('Gallery_V47');
+            const local = localStorage.getItem('Gallery_V48');
             if (local) siteData = JSON.parse(local);
         }
 
@@ -202,7 +162,7 @@
         function toggleEdit() {
             isEditing = !isEditing;
             document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成" : "✏️ 編輯模式";
-            if (!isEditing) localStorage.setItem('Gallery_V47', JSON.stringify(siteData));
+            if (!isEditing) localStorage.setItem('Gallery_V48', JSON.stringify(siteData));
             render();
         }
 
