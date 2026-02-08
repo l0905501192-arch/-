@@ -79,7 +79,7 @@
     </div>
 
     <div class="gallery" id="gallery"></div>
-    <div id="hint">點擊卡片翻轉｜雙擊空白處隱藏工具欄</div>
+    <div id="hint">點擊卡片切換正反面｜雙擊空白處隱藏工具欄</div>
 
     <script>
         let isEditing = false;
@@ -88,7 +88,7 @@
             cards: [{ 
                 title: "作品標題", 
                 img: "https://duk.tw/images/2026/02/08/example.png", 
-                text: "文章內容，點擊可翻轉卡片" 
+                text: "文章內容，再次點擊可翻回圖片面。" 
             }]
         };
 
@@ -101,7 +101,7 @@
                 try {
                     const base64Data = h.replace('data=', '');
                     siteData = JSON.parse(decodeURIComponent(escape(atob(base64Data))));
-                } catch(e) { console.error("Data error", e); }
+                } catch(e) { console.error("Data decode error", e); }
             } else if (isEmbedded) {
                 document.body.classList.add('viewer-mode');
                 loadFromLocal();
@@ -115,16 +115,20 @@
         }
 
         function loadFromLocal() {
-            const local = localStorage.getItem('Gallery_V50');
+            const local = localStorage.getItem('Gallery_V51');
             if (local) siteData = JSON.parse(local);
         }
 
         function toggleUI() { document.body.classList.toggle('viewer-mode'); }
 
+        // --- 優化後的翻轉邏輯 ---
         function handleCardClick(element, event) {
-            if (isEditing || event.target.closest('.edit-tools') || event.target.closest('.scroll-content') || event.target.closest('.title')) {
-                return;
-            }
+            // 編輯模式下不觸發翻轉，讓使用者可以點擊輸入框
+            if (isEditing) return;
+
+            // 檢查是否點擊在背面的文字滾動區
+            // 若想讓點擊文字也能翻轉，則直接 toggle。
+            // 這裡設定為點擊卡片任何地方都 toggle。
             element.classList.toggle('is-flipped');
         }
 
@@ -182,14 +186,15 @@
             isEditing = !isEditing;
             document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成" : "✏️ 編輯模式";
             if (!isEditing) {
+                // 退出編輯時移除所有翻轉 class，回歸正面
                 document.querySelectorAll('.card-container').forEach(c => c.classList.remove('is-flipped'));
-                localStorage.setItem('Gallery_V50', JSON.stringify(siteData));
+                localStorage.setItem('Gallery_V51', JSON.stringify(siteData));
             }
             render();
         }
 
         function addCard() {
-            siteData.cards.push({ title: "作品標題", img: "https://via.placeholder.com/300x420?text=New+Image", text: "文章內容，點擊可翻轉卡片" });
+            siteData.cards.push({ title: "作品標題", img: "https://via.placeholder.com/300x420?text=New+Image", text: "文章內容，再次點擊可翻回圖片面。" });
             render();
         }
 
@@ -198,7 +203,7 @@
                 const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
                 const shareUrl = window.location.origin + window.location.pathname + "#data=" + b64;
                 navigator.clipboard.writeText(shareUrl).then(() => {
-                    alert("🔗 連結已成功複製！\n您可以將此連結貼到 Notion 嵌入。");
+                    alert("🔗 連結已成功複製！\n現在點擊卡片可以隨意在正反面切換。");
                 });
             } catch (e) { alert("連結產生失敗。"); }
         }
