@@ -27,7 +27,7 @@
         .admin-panel {
             background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
             padding: 15px 25px; border-radius: 40px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; gap: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; gap: 12px;
             align-items: center; margin-bottom: 40px; position: sticky; top: 20px; z-index: 1000;
             flex-wrap: wrap; justify-content: center; border: 1px solid #eee;
         }
@@ -40,18 +40,28 @@
         .btn-main { background: var(--accent-color); color: white; }
         .btn-share { background: #333; color: white; }
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; width: 100%; max-width: 1100px; }
-        .card-container { height: 420px; perspective: 1000px; }
+        
+        /* --- 卡片核心結構 --- */
+        .card-container { height: 420px; perspective: 1000px; cursor: pointer; }
         .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; border-radius: 20px; }
-        .card-container:not(.editing):hover .card-inner, .editing .card-inner { transform: rotateY(180deg); }
+        
+        /* 移除 hover，改用 class 控制翻轉 */
+        .card-container.is-flipped .card-inner { transform: rotateY(180deg); }
+        /* 編輯模式下強制翻轉至背面 */
+        .editing .card-inner { transform: rotateY(180deg) !important; }
+
         .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); background: var(--card-bg); overflow: hidden; transition: background 0.3s; }
-        .card-front img { width: 100%; height: 100%; object-fit: cover; }
+        .card-front img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; } /* 禁止圖片干擾點擊 */
         .card-back { transform: rotateY(180deg); display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; }
+        
         .title { font-family: 'Playfair Display', serif; font-size: calc(var(--font-size-base) * 1.6); color: var(--accent-color); margin-bottom: 12px; outline: none; border-bottom: 1px solid transparent; }
         .scroll-content { flex-grow: 1; overflow-y: auto; font-size: var(--font-size-base); line-height: 1.8; color: var(--text-color); outline: none; white-space: pre-wrap; }
+        
         .edit-tools { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; display: none; }
         .editing .edit-tools { display: block; }
         .img-url-input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px; font-size: 11px; color: #666; background: rgba(0,0,0,0.03); }
         .delete-btn { background:#ff7675; color:white; padding:6px 12px; font-size:11px; border:none; border-radius:8px; cursor:pointer; width: 100%; }
+        
         #hint { position: fixed; bottom: 20px; font-size: 10px; color: #ccc; opacity: 0; pointer-events: none; }
         body:hover #hint { opacity: 1; }
     </style>
@@ -71,13 +81,13 @@
     </div>
 
     <div class="gallery" id="gallery"></div>
-    <div id="hint">雙擊空白處可顯示/隱藏控制面板</div>
+    <div id="hint">點擊卡片翻轉｜雙擊空白處隱藏工具欄</div>
 
     <script>
         let isEditing = false;
         let siteData = {
             theme: { bg: "#fdfaf5", card: "#ffffff", accent: "#d4a373", text: "#4a4a4a", size: 16 },
-            cards: [{ title: "作品名稱", img: "https://duk.tw/images/2026/02/08/example.png", text: "點擊編輯模式開始創作。" }]
+            cards: [{ title: "點擊我翻轉", img: "https://duk.tw/images/2026/02/08/example.png", text: "現在不管是電腦點擊還是手機輕觸，都可以輕鬆翻轉卡片囉！" }]
         };
 
         function init() {
@@ -103,11 +113,20 @@
         }
 
         function loadFromLocal() {
-            const local = localStorage.getItem('Gallery_V48');
+            const local = localStorage.getItem('Gallery_V49');
             if (local) siteData = JSON.parse(local);
         }
 
         function toggleUI() { document.body.classList.toggle('viewer-mode'); }
+
+        // 翻轉卡片的邏輯
+        function handleCardClick(element, event) {
+            // 如果是在編輯模式，或者是點擊到卡片背面的輸入框/按鈕，不觸發翻轉
+            if (isEditing || event.target.closest('.edit-tools') || event.target.closest('.scroll-content') || event.target.closest('.title')) {
+                return;
+            }
+            element.classList.toggle('is-flipped');
+        }
 
         function syncControls() {
             document.getElementById('p-bg').value = siteData.theme.bg;
@@ -137,7 +156,7 @@
             const g = document.getElementById('gallery'); g.innerHTML = '';
             siteData.cards.forEach((c, i) => {
                 g.innerHTML += `
-                    <div class="card-container ${isEditing ? 'editing' : ''}">
+                    <div class="card-container ${isEditing ? 'editing' : ''}" onclick="handleCardClick(this, event)">
                         <div class="card-inner">
                             <div class="card-front"><img src="${c.img}" id="img-p-${i}"></div>
                             <div class="card-back">
@@ -162,7 +181,11 @@
         function toggleEdit() {
             isEditing = !isEditing;
             document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成" : "✏️ 編輯模式";
-            if (!isEditing) localStorage.setItem('Gallery_V48', JSON.stringify(siteData));
+            if (!isEditing) {
+                // 退出編輯時移除所有翻轉 class，回歸正面
+                document.querySelectorAll('.card-container').forEach(c => c.classList.remove('is-flipped'));
+                localStorage.setItem('Gallery_V49', JSON.stringify(siteData));
+            }
             render();
         }
 
@@ -176,7 +199,7 @@
                 const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
                 const shareUrl = window.location.origin + window.location.pathname + "#data=" + b64;
                 navigator.clipboard.writeText(shareUrl).then(() => {
-                    alert("🔗 連結已成功複製！\n若瀏覽器顯示警告，建議先至 Lihi.io 縮短此連結後再貼入 Notion。");
+                    alert("🔗 分享連結已成功複製！\n現在手機用戶也可以透過點擊來翻轉卡片了。");
                 });
             } catch (e) { alert("連結產生失敗。"); }
         }
