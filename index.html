@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>個人圖文展示集</title>
+    
+    <meta name="referrer" content="no-referrer">
+    
     <meta name="description" content="個人圖文創作展示作品集">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
@@ -47,11 +50,9 @@
         .editing .card-inner { transform: rotateY(180deg) !important; }
 
         .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); background: var(--card-bg); overflow: hidden; transition: background 0.3s; }
-        
-        /* 修正重點：加入 referrerpolicy */
         .card-front img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-        
         .card-back { transform: rotateY(180deg); display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; }
+        
         .title { font-family: 'Playfair Display', serif; font-size: calc(var(--font-size-base) * 1.6); color: var(--accent-color); margin-bottom: 12px; outline: none; border-bottom: 1px solid transparent; }
         .scroll-content { flex-grow: 1; overflow-y: auto; font-size: var(--font-size-base); line-height: 1.8; color: var(--text-color); outline: none; white-space: pre-wrap; }
         
@@ -85,7 +86,7 @@
         let isEditing = false;
         let siteData = {
             theme: { bg: "#fdfaf5", card: "#ffffff", accent: "#d4a373", text: "#4a4a4a", size: 16 },
-            cards: [{ title: "作品標題", img: "https://duk.tw/images/2026/02/08/example.png", text: "文章內容，再次點擊可翻回圖片面。" }]
+            cards: [{ title: "作品標題", img: "https://via.placeholder.com/300x420?text=Paste+Image+URL", text: "文章內容，再次點擊可翻回圖片面。" }]
         };
 
         function init() {
@@ -111,7 +112,7 @@
         }
 
         function loadFromLocal() {
-            const local = localStorage.getItem('Gallery_V52_Final');
+            const local = localStorage.getItem('Gallery_V53_Universal');
             if (local) siteData = JSON.parse(local);
         }
 
@@ -149,16 +150,16 @@
         function render() {
             const g = document.getElementById('gallery'); g.innerHTML = '';
             siteData.cards.forEach((c, i) => {
-                // 修正重點：img 標籤加入 referrerpolicy="no-referrer"
+                // 這裡加入 referrerpolicy="no-referrer"
                 g.innerHTML += `
                     <div class="card-container ${isEditing ? 'editing' : ''}" onclick="handleCardClick(this, event)">
                         <div class="card-inner">
-                            <div class="card-front"><img src="${c.img}" id="img-p-${i}" referrerpolicy="no-referrer"></div>
+                            <div class="card-front"><img src="${c.img}" id="img-p-${i}" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/300x420?text=Link+Error'"></div>
                             <div class="card-back">
                                 <div class="title" contenteditable="${isEditing}" oninput="siteData.cards[${i}].title=this.innerText">${c.title}</div>
                                 <div class="scroll-content" contenteditable="${isEditing}" oninput="siteData.cards[${i}].text=this.innerText">${c.text}</div>
                                 <div class="edit-tools">
-                                    <input type="text" class="img-url-input" placeholder="圖片網址" value="${c.img}" oninput="updateImg(${i}, this.value)">
+                                    <input type="text" class="img-url-input" placeholder="請貼上『直接連結』(網址結尾為 .jpg 或 .png)" value="${c.img}" oninput="updateImg(${i}, this.value)">
                                     <button class="delete-btn" onclick="siteData.cards.splice(${i},1);render()">刪除卡片</button>
                                 </div>
                             </div>
@@ -178,13 +179,13 @@
             document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成" : "✏️ 編輯模式";
             if (!isEditing) {
                 document.querySelectorAll('.card-container').forEach(c => c.classList.remove('is-flipped'));
-                localStorage.setItem('Gallery_V52_Final', JSON.stringify(siteData));
+                localStorage.setItem('Gallery_V53_Universal', JSON.stringify(siteData));
             }
             render();
         }
 
         function addCard() {
-            siteData.cards.push({ title: "作品標題", img: "https://via.placeholder.com/300x420?text=Image", text: "內容..." });
+            siteData.cards.push({ title: "作品標題", img: "https://via.placeholder.com/300x420?text=Paste+Image+URL", text: "文章內容，點擊可翻轉。" });
             render();
         }
 
@@ -193,7 +194,7 @@
                 const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
                 const shareUrl = window.location.origin + window.location.pathname + "#data=" + b64;
                 navigator.clipboard.writeText(shareUrl).then(() => {
-                    alert("🔗 連結已成功複製！\n\n小提醒：若圖片仍未顯示，請確認您使用的是 duk.tw 的「直接連結」。");
+                    alert("🔗 分享連結已成功複製！\n\n小提醒：請確保圖片連結是『直接連結』(網址結尾為 .jpg 或 .png)。");
                 });
             } catch (e) { alert("連結產生失敗。"); }
         }
