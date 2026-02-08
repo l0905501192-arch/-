@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>個人圖文展示集</title>
+    <title>作品展示</title>
     <meta name="referrer" content="no-referrer">
-    <meta name="description" content="個人圖文展示作品集">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
+    <meta name="description" content="個人作品展示">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎨</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     
     <style id="theme-style">
@@ -43,13 +43,14 @@
 
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; width: 100%; max-width: 1100px; }
         
-        /* --- 卡片優化：硬體加速 --- */
+        /* --- 卡片結構優化 --- */
         .card-container { height: 420px; perspective: 1000px; cursor: pointer; }
+        /* 加入 will-change 優化效能 */
         .card-inner { 
             position: relative; width: 100%; height: 100%; 
             transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); 
             transform-style: preserve-3d; border-radius: 20px;
-            will-change: transform; /* 告訴瀏覽器準備進行動畫優化 */
+            will-change: transform; 
         }
         
         .card-container.is-flipped .card-inner { transform: rotateY(180deg); }
@@ -61,18 +62,21 @@
             box-shadow: 0 8px 25px rgba(0,0,0,0.08); background: var(--card-bg); 
             overflow: hidden; 
         }
+        /* 重要：正面圖片不接收滑鼠事件，確保點擊能穿透到 container 觸發翻轉 */
         .card-front img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
         .card-back { transform: rotateY(180deg); display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; }
         
         .title { font-family: 'Playfair Display', serif; font-size: calc(var(--font-size-base) * 1.6); color: var(--accent-color); margin-bottom: 12px; outline: none; border-bottom: 1px solid transparent; }
         .scroll-content { flex-grow: 1; overflow-y: auto; font-size: var(--font-size-base); line-height: 1.8; color: var(--text-color); outline: none; white-space: pre-wrap; }
-        
-        .edit-tools { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; display: none; }
+        /* 編輯模式下，讓文字區塊可以被點擊輸入 */
+        .editing [contenteditable="true"] { pointer-events: auto; cursor: text; }
+
+        .edit-tools { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; display: none; pointer-events: auto; }
         .editing .edit-tools { display: block; }
         .img-url-input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px; font-size: 11px; background: rgba(0,0,0,0.03); }
         .delete-btn { background:#ff7675; color:white; padding:6px 12px; font-size:11px; border:none; border-radius:8px; cursor:pointer; width: 100%; }
         
-        #hint { position: fixed; bottom: 20px; font-size: 10px; color: #ccc; opacity: 0; pointer-events: none; }
+        #hint { position: fixed; bottom: 20px; font-size: 10px; color: #ccc; opacity: 0; pointer-events: none; transition: opacity 0.3s;}
         body:hover #hint { opacity: 1; }
     </style>
 </head>
@@ -91,13 +95,13 @@
     </div>
 
     <div class="gallery" id="gallery"></div>
-    <div id="hint">點擊卡片翻轉正/反面｜雙擊背景隱藏面板</div>
+    <div id="hint">點擊卡片切換正/反面｜雙擊背景隱藏面板</div>
 
     <script>
         let isEditing = false;
         let siteData = {
             theme: { bg: "#fdfaf5", card: "#ffffff", accent: "#d4a373", text: "#4a4a4a", size: 16 },
-            cards: [{ title: "作品標題", img: "https://via.placeholder.com/300x420?text=Paste+Image+URL", text: "點擊可切換正反面。" }]
+            cards: [{ title: "作品標題", img: "https://via.placeholder.com/300x420?text=Image+Link", text: "點擊卡片可切換正反面。\n請在編輯模式貼上圖片的直接連結。" }]
         };
 
         function init() {
@@ -107,11 +111,12 @@
             if (h.startsWith('data=')) {
                 document.body.classList.add('viewer-mode');
                 try {
+                    // 使用 try-catch 防止 Base64 解析錯誤導致卡死
                     siteData = JSON.parse(decodeURIComponent(escape(atob(h.replace('data=', '')))));
-                } catch(e) { console.error("Data Load Error"); }
+                } catch(e) { console.error("Data Load Error", e); alert("資料讀取錯誤，可能連結不完整。"); }
             } else {
                 if (isEmbedded) document.body.classList.add('viewer-mode');
-                const local = localStorage.getItem('Gallery_V54_Fast');
+                const local = localStorage.getItem('Gallery_V55_Stable');
                 if (local) siteData = JSON.parse(local);
             }
             syncControls();
@@ -121,14 +126,14 @@
 
         function toggleUI() { document.body.classList.toggle('viewer-mode'); }
 
-        // --- 點擊翻轉邏輯：支援雙向翻轉 ---
+        // --- 修正後的點擊邏輯 ---
         function handleCardClick(event) {
-            const card = event.currentTarget;
-            // 編輯模式或點擊輸入框/標題時不翻轉
-            if (isEditing || event.target.closest('.edit-tools') || event.target.closest('.scroll-content') || event.target.closest('.title')) {
+            // 只有在「編輯模式」下，且點擊了「可編輯區域」或「工具列」時，才阻止翻轉
+            if (isEditing && (event.target.isContentEditable || event.target.closest('.edit-tools'))) {
                 return;
             }
-            card.classList.toggle('is-flipped');
+            // 其他情況（訪客模式點擊任何地方，或編輯模式點擊邊緣）都執行翻轉
+            this.classList.toggle('is-flipped');
         }
 
         function syncControls() {
@@ -157,20 +162,24 @@
 
         function render() {
             const g = document.getElementById('gallery'); 
-            g.innerHTML = ''; // 清空重繪
+            g.innerHTML = ''; 
             siteData.cards.forEach((c, i) => {
                 const cardDiv = document.createElement('div');
                 cardDiv.className = `card-container ${isEditing ? 'editing' : ''}`;
+                // 綁定修正後的點擊事件
                 cardDiv.onclick = handleCardClick;
+                // 加入圖片錯誤處理與 lazy loading
                 cardDiv.innerHTML = `
                     <div class="card-inner">
-                        <div class="card-front"><img src="${c.img}" referrerpolicy="no-referrer" loading="lazy"></div>
+                        <div class="card-front">
+                            <img src="${c.img}" referrerpolicy="no-referrer" loading="lazy" onerror="this.onerror=null;this.src='https://via.placeholder.com/300x420?text=Image+Load+Error';">
+                        </div>
                         <div class="card-back">
                             <div class="title" contenteditable="${isEditing}" oninput="siteData.cards[${i}].title=this.innerText">${c.title}</div>
                             <div class="scroll-content" contenteditable="${isEditing}" oninput="siteData.cards[${i}].text=this.innerText">${c.text}</div>
                             <div class="edit-tools">
-                                <input type="text" class="img-url-input" placeholder="貼上圖片連結" value="${c.img}" oninput="updateImg(${i}, this.value)">
-                                <button class="delete-btn" onclick="siteData.cards.splice(${i},1);render()">刪除卡片</button>
+                                <input type="text" class="img-url-input" placeholder="貼上圖片直接連結 (.jpg/.png)" value="${c.img}" oninput="updateImg(${i}, this.value)">
+                                <button class="delete-btn" onclick="deleteCard(event, ${i})">刪除卡片</button>
                             </div>
                         </div>
                     </div>`;
@@ -178,9 +187,9 @@
             });
         }
 
+        // 局部更新圖片，提升效能
         function updateImg(i, url) { 
             siteData.cards[i].img = url; 
-            // 局部更新圖片，不重繪整張卡片以提升效能
             const container = document.querySelectorAll('.card-container')[i];
             const img = container.querySelector('img');
             if(img) img.src = url; 
@@ -190,23 +199,35 @@
             isEditing = !isEditing;
             document.getElementById('edit-btn').innerText = isEditing ? "✅ 完成" : "✏️ 編輯模式";
             if (!isEditing) {
+                // 退出編輯時，強制所有卡片翻回正面
                 document.querySelectorAll('.card-container').forEach(c => c.classList.remove('is-flipped'));
-                localStorage.setItem('Gallery_V54_Fast', JSON.stringify(siteData));
+                localStorage.setItem('Gallery_V55_Stable', JSON.stringify(siteData));
             }
             render();
         }
 
         function addCard() {
-            siteData.cards.push({ title: "新標題", img: "https://via.placeholder.com/300x420?text=New", text: "點擊翻轉查看內容。" });
+            siteData.cards.push({ title: "新作品", img: "https://via.placeholder.com/300x420?text=New", text: "點擊可翻轉。" });
             render();
+        }
+        
+        // 修正刪除按鈕的事件冒泡問題
+        function deleteCard(event, i) {
+            event.stopPropagation(); // 防止觸發翻轉
+            if(confirm('確定要刪除這張卡片嗎？')) {
+                siteData.cards.splice(i,1);
+                render();
+            }
         }
 
         function saveAndCopy() {
-            const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
-            const shareUrl = window.location.origin + window.location.pathname + "#data=" + b64;
-            navigator.clipboard.writeText(shareUrl).then(() => {
-                alert("🔗 連結已成功複製！\n建議：若連結過長導致讀取緩慢，請至 Lihi.io 縮短後再分享。");
-            });
+            try {
+                const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(siteData))));
+                const shareUrl = window.location.origin + window.location.pathname + "#data=" + b64;
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    alert("🔗 連結已成功複製！\n如果網址太長，建議使用 Lihi.io 縮短後再分享。");
+                });
+            } catch (e) { alert("連結產生失敗，資料可能過多。"); }
         }
 
         init();
